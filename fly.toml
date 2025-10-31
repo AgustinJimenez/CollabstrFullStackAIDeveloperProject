@@ -1,0 +1,33 @@
+app = "ai-brief-generator"
+primary_region = "sjc"
+
+[build]
+
+[env]
+  AI_PROVIDER = "openai"
+  DEBUG = "false"
+  PORT = "8000"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[http_service.checks]]
+  interval = "15s"
+  grace_period = "5s"
+  method = "GET"
+  path = "/api/health/"
+  protocol = "http"
+  timeout = "10s"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[deploy]
+  release_command = "python manage.py migrate"

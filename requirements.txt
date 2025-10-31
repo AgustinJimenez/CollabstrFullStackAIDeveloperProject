@@ -1,0 +1,13 @@
+Django==5.1.2
+langchain-ollama==0.3.10
+langchain-openai==0.2.14
+requests==2.32.3
+profanity-check==1.0.3
+python-dotenv==1.0.1
+pytest==8.3.3
+playwright==1.48.0
+pytest-playwright==0.6.2
+faker==28.4.1
+dj-database-url==2.1.0
+psycopg[binary]==3.2.12
+gunicorn==21.2.0

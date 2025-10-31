@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Brief Generator - Docker Version</title>
+
+    <!-- Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Minimal custom tweaks; DaisyUI handles the styling */
+        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
+
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24;
+        }
+
+        /* Fix alert-error text color */
+        .alert-error {
+            color: white !important;
+        }
+    </style>
+</head>
+<body class="bg-base-200 min-h-screen py-12 px-4">
+    <!-- Environment Provider Label -->
+    <div class="fixed top-4 right-4 z-50">
+        <div class="badge badge-outline badge-sm gap-1">
+            <span class="material-symbols-outlined text-xs">settings</span>
+            {{ ai_provider|upper }}
+        </div>
+    </div>
+
+    <div class="mx-auto flex max-w-3xl flex-col gap-8">
+        <header class="text-center space-y-3">
+            <h1 class="text-4xl font-semibold text-base-content">AI Brief Generator</h1>
+            <p class="text-base-content/70">Create professional campaign briefs with AI-powered content strategy</p>
+        </header>
+
+        <div class="card bg-base-100 shadow-2xl">
+            <div class="card-body space-y-6">
+                <form id="briefForm" class="space-y-6" data-ai-provider="{{ ai_provider }}">
+                    {% if ai_provider == 'openai' %}
+                    <div class="collapse collapse-arrow rounded-box border border-base-300">
+                        <input type="checkbox" class="peer" checked="checked">
+                        <div class="collapse-title flex items-center justify-between gap-3 text-base font-medium">
+                            <span>OpenAI API Token (for test only)</span>
+                        </div>
+                        <div class="collapse-content space-y-3">
+                            <label class="form-control">
+                                <div class="input input-bordered rounded-xl w-full flex items-center gap-2">
+                                    <input 
+                                        type="password" 
+                                        id="api_token" 
+                                        name="api_token"
+                                        value="{{ ai_provider_token|default_if_none:'' }}"
+                                        placeholder="Enter OpenAI API token"
+                                        class="grow"
+                                    >
+                                    <button type="button" id="toggleTokenVisibility" class="btn btn-sm btn-ghost px-2">
+                                        <span id="tokenEyeIcon" class="material-symbols-outlined">visibility</span>
+                                    </button>
+                                </div>
+                            </label>
+                            <p class="text-sm text-base-content/60">Leave blank to use the default server token.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-control">
+                        <label for="brand_name" class="label">
+                            <span class="label-text font-medium">Brand Name *</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="brand_name" 
+                            name="brand_name" 
+                            maxlength="50"
+                            required
+                            placeholder="Enter your brand name"
+                            class="input input-bordered rounded-xl w-full"
+                        >
+                    </div>
+
+                    <div class="grid gap-6 md:grid-cols-2">
+                        <div class="form-control">
+                            <label for="platform" class="label">
+                                <span class="label-text font-medium">Target Platform *</span>
+                            </label>
+                            <select id="platform" name="platform" required class="select select-bordered rounded-xl w-full bg-base-100 text-base-content">
+                                <option value="">Select platform...</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="TikTok">TikTok</option>
+                                <option value="UGC">UGC</option>
+                            </select>
+                        </div>
+
+                        <div class="form-control">
+                            <label for="goal" class="label">
+                                <span class="label-text font-medium">Campaign Goal *</span>
+                            </label>
+                            <select id="goal" name="goal" required class="select select-bordered rounded-xl w-full bg-base-100 text-base-content">
+                                <option value="">Select goal...</option>
+                                <option value="Awareness">Awareness</option>
+                                <option value="Conversions">Conversions</option>
+                                <option value="Content Assets">Content Assets</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label for="tone" class="label">
+                            <span class="label-text font-medium">Brand Tone *</span>
+                        </label>
+                        <select id="tone" name="tone" required class="select select-bordered rounded-xl w-full bg-base-100 text-base-content">
+                            <option value="">Select tone...</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Friendly">Friendly</option>
+                            <option value="Playful">Playful</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn bg-neutral text-white rounded-xl w-full" id="submitBtn" disabled>
+                        Generate Campaign Brief
+                    </button>
+                </form>
+
+                <div id="loading" class="hidden flex flex-col items-center gap-4 text-base-content/60">
+                    <span class="loading loading-spinner loading-md"></span>
+                    <span>Generating your campaign brief...</span>
+                </div>
+
+                <div id="error" class="alert alert-error hidden"></div>
+
+                <div id="results" class="hidden space-y-6">
+                    <h3 class="text-2xl font-semibold text-base-content">Your Campaign Brief</h3>
+
+                    <!-- Campaign Brief Card - Primary Blue -->
+                    <div class="card bg-primary/10 border border-primary/20 shadow-lg">
+                        <div class="card-body">
+                            <h4 class="card-title text-primary flex items-center gap-2">
+                                <span class="material-symbols-outlined">campaign</span>
+                                Campaign Brief
+                            </h4>
+                            <p id="briefContent" class="leading-relaxed text-base-content/90"></p>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <!-- Content Angles Card - Success Green -->
+                        <div class="card bg-success/10 border border-success/20 shadow-lg">
+                            <div class="card-body">
+                                <h4 class="card-title text-success flex items-center gap-2">
+                                    <span class="material-symbols-outlined">lightbulb</span>
+                                    Content Angles
+                                </h4>
+                                <ol id="anglesList" class="list-decimal list-inside space-y-2 text-base-content/80"></ol>
+                            </div>
+                        </div>
+                        
+                        <!-- Creator Selection Criteria Card - Warning Orange -->
+                        <div class="card bg-warning/10 border border-warning/20 shadow-lg">
+                            <div class="card-body">
+                                <h4 class="card-title text-warning flex items-center gap-2">
+                                    <span class="material-symbols-outlined">group</span>
+                                    Creator Selection Criteria
+                                </h4>
+                                <ul id="criteriaList" class="list-disc list-inside space-y-2 text-base-content/80"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Card - Info -->
+                    <div id="metrics" class="alert alert-info text-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            const tokenInput = $('#api_token');
+            const toggleEye = $('#toggleTokenVisibility');
+            const eyeIcon = $('#tokenEyeIcon');
+
+            toggleEye.on('click', function() {
+                if (!tokenInput.length) return;
+                const isPassword = tokenInput.attr('type') === 'password';
+                tokenInput.attr('type', isPassword ? 'text' : 'password');
+                eyeIcon.text(isPassword ? 'visibility_off' : 'visibility');
+            });
+
+            // Form validation function
+            function validateForm() {
+                const brandName = $('#brand_name').val().trim();
+                const platform = $('#platform').val();
+                const goal = $('#goal').val();
+                const tone = $('#tone').val();
+                
+                const isValid = brandName && platform && goal && tone;
+                $('#submitBtn').prop('disabled', !isValid);
+                
+                return isValid;
+            }
+
+            // Add event listeners to all form fields
+            $('#brand_name, #platform, #goal, #tone').on('input change', function() {
+                validateForm();
+            });
+
+            // Initial validation check
+            validateForm();
+
+            $('#briefForm').on('submit', function(e) {
+                e.preventDefault();
+
+                // Double-check validation before submitting
+                if (!validateForm()) {
+                    showError('Please fill in all required fields');
+                    return;
+                }
+
+                $('#submitBtn').prop('disabled', true).text('Generating...');
+                $('#loading').removeClass('hidden').show();
+                $('#results').addClass('hidden').hide();
+                $('#error').addClass('hidden').hide();
+
+                const formData = {
+                    brand_name: $('#brand_name').val().trim(),
+                    platform: $('#platform').val(),
+                    goal: $('#goal').val(),
+                    tone: $('#tone').val()
+                };
+
+                const tokenField = $('#api_token');
+                if (tokenField.length) {
+                    const tokenValue = tokenField.val().trim();
+                    if (tokenValue) {
+                        formData.api_token = tokenValue;
+                    }
+                }
+
+                $.ajax({
+                    url: '/api/generate-brief/',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    timeout: 60000,
+                    success: function(response) {
+                        if (response.success) {
+                            displayResults(response);
+                        } else {
+                            showError(response.error || 'Generation failed');
+                        }
+                    },
+                    error: function(xhr, status) {
+                        let errorMsg = 'Server error occurred';
+
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMsg = xhr.responseJSON.error;
+                        } else if (status === 'timeout') {
+                            errorMsg = 'Request timed out. Please try again.';
+                        } else if (xhr.status === 429) {
+                            errorMsg = 'Rate limit exceeded. Please wait a minute before trying again.';
+                        }
+
+                        showError(errorMsg);
+                    },
+                    complete: function() {
+                        $('#submitBtn').text('Generate Campaign Brief');
+                        $('#loading').addClass('hidden').hide();
+                        // Re-run validation to set correct button state
+                        validateForm();
+                    }
+                });
+            });
+
+            function displayResults(response) {
+                $('#briefContent').text(response.brief);
+
+                const anglesList = $('#anglesList');
+                anglesList.empty();
+                response.angles.forEach(function(angle) {
+                    anglesList.append('<li>' + angle + '</li>');
+                });
+
+                const criteriaList = $('#criteriaList');
+                criteriaList.empty();
+                response.criteria.forEach(function(criterion) {
+                    criteriaList.append('<li>' + criterion + '</li>');
+                });
+
+                $('#metrics').empty();
+
+                if (response.metrics) {
+                    const metrics = response.metrics;
+                    let metricsHtml = '<span class="font-semibold">Generation Metrics:</span> ';
+                    metricsHtml += 'Latency: ' + (metrics.latency_seconds || 0) + 's';
+                    if (metrics.tokens_used) {
+                        metricsHtml += ' | Tokens: ' + metrics.tokens_used;
+                    }
+                    metricsHtml += ' | Provider: ' + (metrics.provider || 'unknown');
+                    metricsHtml += ' | Request time: ' + (metrics.request_duration || 0) + 's';
+
+                    $('#metrics').html(metricsHtml);
+                }
+
+                $('#results').removeClass('hidden').show().css('display', 'block');
+                $('#error').addClass('hidden').hide().css('display', 'none');
+            }
+
+            function showError(message) {
+                $('#error').text(message).removeClass('hidden').show().css('display', 'block');
+                $('#loading').addClass('hidden').hide();
+                $('#results').addClass('hidden').hide().css('display', 'none');
+            }
+        });
+    </script>
+</body>
+</html>

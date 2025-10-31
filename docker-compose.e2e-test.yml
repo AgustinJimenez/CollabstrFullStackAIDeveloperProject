@@ -1,0 +1,15 @@
+# E2E testing with test provider (fast)
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    environment:
+      - DISPLAY=:99
+      - AI_PROVIDER=test
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined

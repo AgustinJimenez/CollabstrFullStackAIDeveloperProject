@@ -1,0 +1,19 @@
+# Docker Compose override for development
+# This file is automatically used with docker-compose up
+services:
+  django:
+    # Mount source code for live reloading
+    volumes:
+      - .:/app
+      - /app/venv
+      - /app/__pycache__
+    # Development command with auto-reload
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    # Enable development mode
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=aibrief.settings
+      - PYTHONPATH=/app

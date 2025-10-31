@@ -1,0 +1,15 @@
+# E2E testing with Ollama provider
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    environment:
+      - DISPLAY=:99
+      - AI_PROVIDER=ollama
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined

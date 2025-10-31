@@ -1,0 +1,41 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_ORIGINS=*
+    networks:
+      - ai_network
+
+  django:
+    build: .
+    container_name: django_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/venv  # Exclude venv from volume mount
+    working_dir: /app
+    depends_on:
+      - ollama
+    env_file:
+      - .env
+    networks:
+      - ai_network
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    restart: unless-stopped
+    user: root  # Override for development to avoid permission issues
+
+volumes:
+  ollama_data:
+
+networks:
+  ai_network:
+    driver: bridge

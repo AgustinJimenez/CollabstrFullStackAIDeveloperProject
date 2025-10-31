@@ -1,0 +1,54 @@
+# Alternative Dockerfile with Playwright support
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install system dependencies for Playwright (ARM64 compatible)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build essentials
+    gcc g++ python3-dev curl build-essential \
+    # Playwright browser dependencies (updated package names)
+    fonts-unifont \
+    libgdk-pixbuf-2.0-0 \
+    libasound2t64 \
+    libatk1.0-0t64 \
+    libcairo2 \
+    libcups2t64 \
+    libdrm2 \
+    libgtk-3-0t64 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    fonts-liberation \
+    libappindicator3-1 \
+    lsb-release \
+    xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python deps
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright browsers (without --with-deps since we manually installed dependencies)
+RUN playwright install
+
+# Copy application
+COPY . /app/
+
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8000
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

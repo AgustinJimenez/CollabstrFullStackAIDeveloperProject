@@ -1,0 +1,1 @@
+# E2E Tests for AI Brief Generator

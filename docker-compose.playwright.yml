@@ -1,0 +1,22 @@
+# Docker Compose override for Playwright testing
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.playwright.yml up
+
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    env_file:
+      - .env
+    environment:
+      - DISPLAY=:99
+      # AI_PROVIDER and other settings come from .env file
+      # Override specific settings for testing if needed:
+      # - AI_PROVIDER=test  # Uncomment to force test provider
+    cap_add:
+      - SYS_ADMIN
+    # Add capabilities for Chromium sandbox
+    security_opt:
+      - seccomp:unconfined
